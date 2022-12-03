@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 import onnxruntime
-import torch
+#import torch
 import time
 import random
 
@@ -20,6 +20,9 @@ class YOLOV5_ONNX(object):
 
         self.aim_size = 640
         self.alert_size = 384
+
+        self.w_croprate = 0.5
+        self.h_croprate = 0.6
 
         self.is_record = False
         self.record_log = './detect_log'
@@ -100,19 +103,6 @@ class YOLOV5_ONNX(object):
 
         return y
 
-    def xyxy2xywh(self,x):
-        
-        if isinstance(x,np.ndarray):
-            y = np.copy(x)
-        else:
-            y = x.clone()
-
-        y[:, 0] = (x[:, 0] + x[:, 2]) / 2 
-        y[:, 1] = (x[:, 1] + x[:, 3]) / 2  
-        y[:, 2] = x[:, 2] - x[:, 0]   
-        y[:, 3] = x[:, 3] - x[:, 1]  
-
-        return y 
 
     def torchvision_nms(self, bboxes, scores, threshold=0.5):
         x1 = bboxes[:,0]
@@ -120,35 +110,48 @@ class YOLOV5_ONNX(object):
         x2 = bboxes[:,2]
         y2 = bboxes[:,3]
         areas = (x2-x1)*(y2-y1)   # [N,] 每个bbox的面积
-        _, order = scores.sort(0, descending=True)    # 降序排列
+        #_, order = scores.sort(0, descending=True)    # 降序排列
+        order = (-scores).argsort(0)
 
         keep = []
-        while order.numel() > 0:       # torch.numel()返回张量元素个数
-            if order.numel() == 1:     # 保留框只剩一个
+        while order.size > 0:       
+            if order.size == 1:     
                 i = order.item()
                 keep.append(i)
                 break
             else:
-                i = order[0].item()    # 保留scores最大的那个框box[i]
+                i = order[0].item()    
                 keep.append(i)
 
-            # 计算box[i]与其余各框的IOU(思路很好)
+            #  IOU calc
+            """
             xx1 = x1[order[1:]].clamp(min=x1[i])   # [N-1,]
             yy1 = y1[order[1:]].clamp(min=y1[i])
             xx2 = x2[order[1:]].clamp(max=x2[i])
             yy2 = y2[order[1:]].clamp(max=y2[i])
             inter = (xx2-xx1).clamp(min=0) * (yy2-yy1).clamp(min=0)   # [N-1,]
+            """
+
+            xx1 = x1[order[1:]].clip(min=x1[i])
+            yy1 = y1[order[1:]].clip(min=y1[i])
+            xx2 = x2[order[1:]].clip(max=x2[i])
+            yy2 = y2[order[1:]].clip(max=y2[i])
+            inter = (xx2-xx1).clip(min=0) * (yy2-yy1).clip(min=0)
+
 
             iou = inter / (areas[i]+areas[order[1:]]-inter)  # [N-1,]
-            idx = (iou <= threshold).nonzero().squeeze() # 注意此时idx为[N-1,] 而order为[N,]
-            if idx.numel() == 0:
+            idx = (iou <= threshold).nonzero()[0] # 注意此时idx为[N-1,] 而order为[N,]
+            if idx.size == 0:
                 break
             order = order[idx+1]  # 修补索引之间的差值
-        return torch.LongTensor(keep)   # Pytorch的索引值为LongTensor
+        #return torch.LongTensor(keep)   # Pytorch的索引值为LongTensor
+        return np.array(keep)
 
     def nms(self,prediction, conf_thres=0.1, iou_thres=0.6, agnostic=False):
-        if prediction.dtype is torch.float16:
-            prediction = prediction.float()  # to FP32
+        """if prediction.dtype is torch.float16:
+            prediction = prediction.float()  # to FP3
+        """
+        prediction = prediction.astype(np.float32)
         xc = prediction[..., 4] > conf_thres  # candidates
         min_wh, max_wh = 2, 4096  # (pixels) minimum and maximum box width and height
         max_det = 300  # maximum number of detections per image
@@ -161,8 +164,10 @@ class YOLOV5_ONNX(object):
             x[:, 5:] *= x[:, 4:5]  # conf = obj_conf * cls_conf
             box = self.xywh2xyxy(x[:, :4])
 
-            conf, j = x[:, 5:].max(1, keepdim=True)
-            x = torch.cat((torch.tensor(box), conf, j.float()), 1)[conf.view(-1) > conf_thres]
+            #conf, j = x[:, 5:].max(1, keepdim=True)
+            conf, j = np.max(x[:,5:],1,keepdims=True), np.argmax(x[:,5:],1,keepdims=True)
+            #x = torch.cat((torch.tensor(box), conf, j.float()), 1)[conf.view(-1) > conf_thres]
+            x  = np.concatenate((box,conf,j.astype(np.float32)),1)
             n = x.shape[0]  # number of boxes
             if not n:
                 continue
@@ -177,10 +182,16 @@ class YOLOV5_ONNX(object):
 
     def clip_coords(self,boxes, img_shape):
         # Clip bounding xyxy bounding boxes to image shape (height, width)
+        """
         boxes[:, 0].clamp_(0, img_shape[1])  # x1
         boxes[:, 1].clamp_(0, img_shape[0])  # y1
         boxes[:, 2].clamp_(0, img_shape[1])  # x2
         boxes[:, 3].clamp_(0, img_shape[0])  # y2
+        """
+        boxes[:,0] = boxes[:, 0].clip(0, img_shape[1])  # x1
+        boxes[:, 1] = boxes[:, 1].clip(0, img_shape[0])  # y1
+        boxes[:, 2] = boxes[:, 2].clip(0, img_shape[1])  # x2
+        boxes[:, 3] = boxes[:, 3].clip(0, img_shape[0])  # y2        
 
     def scale_coords(self,img1_shape, coords, img0_shape, ratio_pad=None):
         '''
@@ -230,7 +241,8 @@ class YOLOV5_ONNX(object):
         input_feed=self.get_input_feed(self.aim_input_name,img)
         pred=self.aim_onnx_session.run(output_names=self.aim_output_name,input_feed=input_feed)
 
-        results = torch.tensor(pred)
+        #results = torch.tensor(pred)
+        results = np.array(pred)
         cast = time.time() - start
         print("瞄准网络耗时:{}".format(cast))
 
@@ -259,8 +271,8 @@ class YOLOV5_ONNX(object):
         # process src_img
         src_size=src_img.shape[:2]
         h,w = src_size
-        left_pad = int(w*0.25)
-        crop_img = src_img[0:int(h*0.6), int(w*0.25): int(w*0.25) + int(w*0.5)]
+        left_pad = int(w*(1-self.w_croprate)/2)
+        crop_img = src_img[0:int(h*self.h_croprate), int(w*(1-self.w_croprate)/2): int(w*(1-self.w_croprate)/2) + int(w*self.w_croprate)]
         crop_size = crop_img.shape[:2]
 
         img=self.letterbox(crop_img,img_size,stride=32)[0]
@@ -280,7 +292,8 @@ class YOLOV5_ONNX(object):
         input_feed=self.get_input_feed(self.alert_input_name,img)
         pred=self.alert_onnx_session.run(output_names=self.alert_output_name,input_feed=input_feed)
 
-        results = torch.tensor(pred)
+        #results = torch.tensor(pred)
+        results = np.array(pred)
         cast = time.time() - start
         print("弱点网络耗时:{}".format(cast))
 
@@ -334,7 +347,7 @@ class YOLOV5_ONNX(object):
 
 
 if __name__=="__main__":
-    model=YOLOV5_ONNX(aim_onnx_path="./yolov5n_640.onnx",alert_onnx_path='./yolov5t2_320.onnx')
+    model=YOLOV5_ONNX(aim_onnx_path="./yolov5n_640.onnx",alert_onnx_path='./yolov5t2_384.onnx')
     img_path="1_371.jpg"
     img = cv2.imread(img_path) # BGR
     print(model.infer_aim(img))
