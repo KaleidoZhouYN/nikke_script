@@ -1,5 +1,5 @@
 # for PyQt5 simulator,please refer :https://blog.csdn.net/robot_no1/article/details/120795278
-# to send message
+# to Post message
 import win32gui
 import win32con
 
@@ -23,11 +23,11 @@ def left_up(hWnd, x, y):
 
 def __set_cursor(hWnd, msg):
     lparam = (msg << 16 ) | 1
-    win32gui.SendMessage(hWnd,win32con.WM_SETCURSOR,hWnd,lparam)
+    win32gui.PostMessage(hWnd,win32con.WM_SETCURSOR,hWnd,lparam)
 
 def __activate_mouse(hWnd):
     lparam = (win32con.WM_LBUTTONDOWN << 16) | win32con.HTCLIENT
-    win32gui.SendMessage(hWnd, win32con.WM_MOUSEACTIVATE, hWnd, lparam)
+    win32gui.PostMessage(hWnd, win32con.WM_MOUSEACTIVATE, hWnd, lparam)
 
 def mouse_click(hWnd, x, y, time=0.5):
     left_down(hWnd, x, y)

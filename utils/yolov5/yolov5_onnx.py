@@ -5,30 +5,49 @@ import torch
 import time
 import random
 
-class YOLOV5_ONNX(object):
-    def __init__(self,onnx_path):
-        self.onnx_session=onnxruntime.InferenceSession(onnx_path)
-        self.input_name=self.get_input_name()
-        self.output_name=self.get_output_name()
+import os
+import shutil
 
-    def get_input_name(self):
+class YOLOV5_ONNX(object):
+    def __init__(self,aim_onnx_path, alert_onnx_path):
+        self.aim_onnx_session=onnxruntime.InferenceSession(aim_onnx_path,providers=['CPUExecutionProvider'])
+        self.aim_input_name=self.get_input_name(self.aim_onnx_session)
+        self.aim_output_name=self.get_output_name(self.aim_onnx_session)
+
+        self.alert_onnx_session=onnxruntime.InferenceSession(alert_onnx_path,providers=['CPUExecutionProvider'])
+        self.alert_input_name=self.get_input_name(self.alert_onnx_session)
+        self.alert_output_name=self.get_output_name(self.alert_onnx_session)      
+
+        self.aim_size = 640
+        self.alert_size = 384
+
+        self.is_record = False
+        self.record_log = './detect_log'
+        if os.path.exists(self.record_log):
+            shutil.rmtree(self.record_log)
+        os.mkdir(self.record_log)
+        self.frame_cnt = 0
+
+
+
+    def get_input_name(self,session):
         input_name=[]
-        for node in self.onnx_session.get_inputs():
+        for node in session.get_inputs():
             input_name.append(node.name)
 
         return input_name
 
 
-    def get_output_name(self):
+    def get_output_name(self,session):
         output_name=[]
-        for node in self.onnx_session.get_outputs():
+        for node in session.get_outputs():
             output_name.append(node.name)
 
         return output_name
 
-    def get_input_feed(self,image_tensor):
+    def get_input_feed(self,input_name,image_tensor):
         input_feed={}
-        for name in self.input_name:
+        for name in input_name:
             input_feed[name]=image_tensor
 
         return input_feed
@@ -187,9 +206,8 @@ class YOLOV5_ONNX(object):
 
 
 
-    def infer(self,src_img):
-        #img_size=(1024,1024) 
-        img_size = (640,640)
+    def infer_aim(self,src_img):
+        img_size = self.aim_size
         conf_thres=0.5 
         iou_thres=0.45 
 
@@ -209,31 +227,89 @@ class YOLOV5_ONNX(object):
 
 
         start=time.time()
-        input_feed=self.get_input_feed(img)
-        pred=self.onnx_session.run(output_names=self.output_name,input_feed=input_feed)
+        input_feed=self.get_input_feed(self.aim_input_name,img)
+        pred=self.aim_onnx_session.run(output_names=self.aim_output_name,input_feed=input_feed)
 
         results = torch.tensor(pred)
+        cast = time.time() - start
+        print("瞄准网络耗时:{}".format(cast))
+
+
         results = self.nms(results, conf_thres, iou_thres)
         cast=time.time()-start
-        print("检测耗时:{}".format(cast))
+        print("瞄准检测耗时:{}".format(cast))
 
         img_shape=img.shape[2:]
         #print(img_size)
-        for det in results:  # detections per image
-            if det is not None and len(det):
-                det[:, :4] = self.scale_coords(img_shape, det[:, :4],src_size).round()
-                det[:, :4] = self.xyxy2xywh(det[:,:4])
-        """
+        det = results[0]
         if det is not None and len(det):
+            det[:, :4] = self.scale_coords(img_shape, det[:, :4],src_size).round()
+            #det[:, :4] = self.xyxy2xywh(det[:,:4])
+        
+        if self.is_record:
             self.draw(src_img, det)
-        """
-        return results
+        
+        return det
+
+    def infer_alert(self,src_img):
+        img_size = self.alert_size
+        conf_thres=0.7
+        iou_thres=0.45 
+
+        # process src_img
+        src_size=src_img.shape[:2]
+        h,w = src_size
+        left_pad = int(w*0.25)
+        crop_img = src_img[0:int(h*0.6), int(w*0.25): int(w*0.25) + int(w*0.5)]
+        crop_size = crop_img.shape[:2]
+
+        img=self.letterbox(crop_img,img_size,stride=32)[0]
+
+
+        # Convert
+        img = img[:, :, ::-1].transpose(2, 0, 1)  # BGR to RGB, to 3x416x416
+        img = np.ascontiguousarray(img)
+
+
+        img=img.astype(dtype=np.float32)
+        img/=255.0
+        img=np.expand_dims(img,axis=0)
+
+
+        start=time.time()
+        input_feed=self.get_input_feed(self.alert_input_name,img)
+        pred=self.alert_onnx_session.run(output_names=self.alert_output_name,input_feed=input_feed)
+
+        results = torch.tensor(pred)
+        cast = time.time() - start
+        print("弱点网络耗时:{}".format(cast))
+
+
+        results = self.nms(results, conf_thres, iou_thres)
+        cast=time.time()-start
+        print("弱点检测耗时:{}".format(cast))
+
+        img_shape=img.shape[2:]
+        #print(img_size)
+        det = results[0]
+        if det is not None and len(det):
+            det[:, :4] = self.scale_coords(img_shape, det[:, :4],crop_size).round()
+            #det[:, :4] = self.xyxy2xywh(det[:,:4])
+
+            # add left padding
+            det[:, [0,2]] += left_pad
+        if self.is_record:
+            self.draw(src_img, det)
+
+        return det
 
     def plot_one_box(self,x, img, color=None, label=None, line_thickness=None):
         # Plots one bounding box on image img
-        tl = line_thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 1  # line/font thickness
+        tl = line_thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 2  # line/font thickness
+        print(tl)
         color = color or [random.randint(0, 255) for _ in range(3)]
         c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
+        print(c1,c2)
         cv2.rectangle(img, c1, c2, color, thickness=tl, lineType=cv2.LINE_AA)
         if label:
             tf = max(tl - 1, 1)  # font thickness
@@ -243,22 +319,23 @@ class YOLOV5_ONNX(object):
             cv2.putText(img, label, (c1[0], c1[1] - 2), 0, tl / 3, [225, 255, 255], thickness=tf, lineType=cv2.LINE_AA)
 
     def draw(self,img, boxinfo):
+        label_map = {0:'alert',1:'aim_box',2:'drill'}
+        img = img.astype(np.uint8)
         colors = [[0, 0, 255],[0,255,0],[255,0,0]]
-        for *xyxy, conf, cls in boxinfo:
-            label = '%s %.2f' % ('image', conf)
-            print('xyxy: ', xyxy)
-            self.plot_one_box(xyxy, img, label=label, color=colors[int(cls)], line_thickness=1)
+        if not boxinfo is None and len(boxinfo):
+            for *xyxy, conf, cls in boxinfo:
+                label = '%s %.2f' % (label_map[int(cls)], conf)
+                print('xyxy: ', xyxy)
+                self.plot_one_box(xyxy, img, label=label, color=colors[int(cls)], line_thickness=1)
 
-        cv2.namedWindow("dst",0)
-        cv2.imshow("dst", img)
-        cv2.imwrite("data/res1.jpg",img)
-        cv2.waitKey(0)
-        # cv2.imencode('.jpg', img)[1].tofile(os.path.join(dst, id + ".jpg"))
+        cv2.imwrite(os.path.join(self.record_log,'{}.jpg'.format(self.frame_cnt)), img)
+        self.frame_cnt += 1
         return 0
 
 
 if __name__=="__main__":
-    model=YOLOV5_ONNX(onnx_path="./yolov5n_640.onnx")
+    model=YOLOV5_ONNX(aim_onnx_path="./yolov5n_640.onnx",alert_onnx_path='./yolov5t2_320.onnx')
     img_path="1_371.jpg"
     img = cv2.imread(img_path) # BGR
-    print(model.infer(img))
+    print(model.infer_aim(img))
+    print(model.infer_alert(img))
