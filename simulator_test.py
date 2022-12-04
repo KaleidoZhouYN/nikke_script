@@ -1,4 +1,5 @@
-from utils.strategy import MuMuX
+#from utils.strategy import MuMuX
+from utils.simulator.MuMuX import MuMuX
 
 from utils.win import get_hWnd_by_name
 from config import config

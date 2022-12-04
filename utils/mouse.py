@@ -29,9 +29,9 @@ def __activate_mouse(hWnd):
     lparam = (win32con.WM_LBUTTONDOWN << 16) | win32con.HTCLIENT
     win32gui.PostMessage(hWnd, win32con.WM_MOUSEACTIVATE, hWnd, lparam)
 
-def mouse_click(hWnd, x, y, time=0.5):
+def left_click(hWnd, x, y, duration=0.5):
     left_down(hWnd, x, y)
-    move_to(hWnd, x, y)
+    time.sleep(duration)
     left_up(hWnd,x, y)
 
 import time

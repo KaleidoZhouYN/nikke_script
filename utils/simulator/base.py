@@ -17,18 +17,27 @@ import keyboard
 class Simulator(object):
     def __init__(self, hWnd, config):
         self.top_hWnd = hWnd
-        self.ctl_hWnd = hWnd
+        self.top_rect = win32gui.GetWindowRect(self.top_hWnd)
+
+        self.get_ctl_hWnd()
+
         self.config = config
         self.detector = YOLOV5_ONNX(config.aim_onnx_path,config.alert_onnx_path)
 
         rect = win32gui.GetWindowRect(self.ctl_hWnd)
-        self.center = [int(rect[2]-rect[0])//2, int(rect[3]-rect[1])//2]
+        self.center = np.array([int(rect[2]-rect[0])//2, int(rect[3]-rect[1])//2])
         self.ctl_rect = rect
         self.h = rect[3] - rect[1]
-
-        self.top_rect = win32gui.GetWindowRect(self.top_hWnd)
+        self.w = rect[2] - rect[0]
+        self.hero_point = np.array([int(self.w)//2, int(self.h*0.92)])
+        
 
         self.miss_alert_cnt = 0
+        self.is_defend = 0
+        
+
+    def get_ctl_hWnd(self):
+        self.ctl_hWnd = self.top_hWnd
 
     def screenshot(self):
         start=time.time()
@@ -135,12 +144,12 @@ class Simulator(object):
             self.left_up()
             self.left_click(self.hero_point)
             self.is_defend = 1
-            print('进入防御姿态...')
+            print('\n进入防御姿态..............')
         else:
             self.left_click(self.hero_point)
             self.left_down()
             self.is_defend = 0
-            print("解除防御姿态")
+            print("\n解除防御姿态")
 
     def start_simulation(self):
         # first we assume the auto aiming program is off
@@ -151,9 +160,17 @@ class Simulator(object):
         def key_press(key):
             if key.name == 'f':
                 key_press.flag = 1
+            if key.name == 'c':
+                key_press.quit = 1
         key_press.flag = 0
+        key_press.quit = 0
         keyboard.on_press(key_press)
         while True:
+            if key_press.quit:
+                # 结束瞄准
+                print("结束自动瞄准")
+                self.left_up()
+                return 
             if key_press.flag:
                 self.defend()
                 key_press.flag = 0
@@ -162,22 +179,3 @@ class Simulator(object):
                 time.sleep(0.2)
                 continue
             self.aim_alert()
-
-
-class MuMuX(Simulator):
-    def __init__(self, hWnd, config):
-        super().__init__(hWnd, config)
-        # find childWnd
-        def callback(hWnd,lParam):
-            length = win32gui.GetWindowTextLength(hWnd)
-            if (length == 0):
-                return True
-            windowTitle = win32gui.GetWindowText(hWnd)
-            callback._hWndList.append(hWnd)
-
-            return True
-        callback._hWndList = []
-        win32gui.EnumChildWindows(hWnd,callback,None)
-        self.ctl_hWnd = callback._hWndList[0]
-
-
