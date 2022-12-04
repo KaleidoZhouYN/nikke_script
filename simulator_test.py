@@ -7,7 +7,7 @@ from easydict import EasyDict as edict
 config = edict(config)
 
 if __name__ == '__main__':
-    keyword = r'MuMu'
+    keyword = r'雷电模拟器'
     hWnd = get_hWnd_by_name(keyword)
     sim = MuMuX(hWnd,config)
 

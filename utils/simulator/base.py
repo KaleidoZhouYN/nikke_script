@@ -76,6 +76,7 @@ class Simulator(object):
         self.move_cur_center()
         self.left_down()
         aim_box = None
+        miss_cnt = 0
         while True:
             img = self.screenshot()
             print('screenshot img_size:', img.shape)
@@ -87,6 +88,11 @@ class Simulator(object):
                         break
             if not aim_box is None:
                 break
+            miss_cnt += 1
+            if miss_cnt > 5:
+                self.left_up()
+                self.left_down()
+                miss_cnt = 0
         self._offset = np.array([int(aim_box[0]+aim_box[2])//2,int(aim_box[1]+aim_box[3])//2]) - self.center
 
     def aim_alert(self):
