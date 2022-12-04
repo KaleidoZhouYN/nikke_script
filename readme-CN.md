@@ -1,3 +1,8 @@
+# v1.0 release
+- 参考tutorail.mp4
+- 游戏内设置见 设置.jpg
+- 以管理员身份打开run.exe
+
 # update 2022/12/04
 - 移除pytorch依赖
 - 添加手动防御，现在按下f键即可进入/退出 防御姿态
