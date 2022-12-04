@@ -1,3 +1,4 @@
+from easydict import EasyDict as edict
 config = {
     'duration' : 0.01,
     'is_smooth' : 1,
@@ -5,3 +6,5 @@ config = {
     'aim_onnx_path': './utils/yolov5/yolov5n_640.onnx',
     'alert_onnx_path' : './utils/yolov5/yolov5t2_384.onnx'
 }
+
+config = edict(config)

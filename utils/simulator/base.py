@@ -43,7 +43,7 @@ class Simulator(object):
         start=time.time()
         img = get_screenshot_by_hwnd(self.top_hWnd,0,1)
         cast = time.time() - start
-        print('screenshot 耗时:{}'.format(cast))
+        #print('screenshot 耗时:{}'.format(cast))
         
         # 这里我们实际要得到控制窗口的截图
         img = img[self.ctl_rect[1]-self.top_rect[1]:self.ctl_rect[3]-self.top_rect[1], self.ctl_rect[0]-self.top_rect[0]:self.ctl_rect[2]-self.top_rect[0]]
@@ -79,7 +79,7 @@ class Simulator(object):
         miss_cnt = 0
         while True:
             img = self.screenshot()
-            print('screenshot img_size:', img.shape)
+            #print('screenshot img_size:', img.shape)
             det = self.detector.infer_aim(img)
             if det is not None and len(det):
                 for *xyxy,conf,cls in det:
@@ -100,7 +100,7 @@ class Simulator(object):
         aim_box_center = self.mouse_point + self._offset
         img = self.screenshot()
         det = self.detector.infer_alert(img)
-        print('检测弱点总耗时 : ',time.time()-start)
+        #print('检测弱点总耗时 : ',time.time()-start)
 
         # find nearest alert
         x , min_dis = None, 1e9
@@ -117,7 +117,7 @@ class Simulator(object):
         if x is None:
             self.miss_alert_cnt += 1
             if self.miss_alert_cnt > 3:
-                print('未检测到弱点，准心回到屏幕中心上方一点位置')
+                #print('未检测到弱点，准心回到屏幕中心上方一点位置')
                 # alert not detected,move aim back to center
                 offset = self.center - aim_box_center
                 offset[1] -= int(self.h * 0.05)
@@ -150,19 +150,19 @@ class Simulator(object):
             self.left_up()
             self.left_click(self.hero_point)
             self.is_defend = 1
-            print('\n进入防御姿态..............')
+            #print('\n进入防御姿态..............')
         else:
             self.left_click(self.hero_point)
             self.left_down()
             self.is_defend = 0
-            print("\n解除防御姿态")
+            #print("\n解除防御姿态")
 
     def start_simulation(self):
         # first we assume the auto aiming program is off
         self.turnoff_auto_aiming()
-        print('开始寻找准心...')
+        #print('开始寻找准心...')
         self.fix_aim_offset()
-        print("准心调整成功,开始启动自动瞄准，请勿点击游戏")
+        #print("准心调整成功,开始启动自动瞄准，请勿点击游戏")
         def key_press(key):
             if key.name == 'f':
                 key_press.flag = 1
@@ -174,7 +174,7 @@ class Simulator(object):
         while True:
             if key_press.quit:
                 # 结束瞄准
-                print("结束自动瞄准")
+                #print("结束自动瞄准")
                 self.left_up()
                 return 
             if key_press.flag:

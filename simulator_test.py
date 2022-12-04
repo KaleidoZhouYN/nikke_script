@@ -1,14 +1,24 @@
-#from utils.strategy import MuMuX
-from utils.simulator.MuMuX import MuMuX
 
 from utils.win import get_hWnd_by_name
 from config import config
-from easydict import EasyDict as edict
-config = edict(config)
 
+from utils.simulator.base import Simulator
+from utils.simulator.MuMuX import MuMuX
+from utils.simulator.leidian import Leidian
+
+import argparse
+def parser():
+    parse = argparse.ArgumentParser()
+    parse.add_argument('--simulator_name',type=str)
+    parse.add_argument('--hWnd',type=int)
+    args = parse.parse_args()
+
+    return args
+
+s_map =  {'MuMu':MuMuX,r'雷电':Leidian,'other':Simulator}
 if __name__ == '__main__':
-    keyword = r'雷电模拟器'
-    hWnd = get_hWnd_by_name(keyword)
-    sim = MuMuX(hWnd,config)
+    args = parser()
+    simulator = s_map[args.simulator_name]
+    sim = simulator(args.hWnd,config)
 
     sim.start_simulation()

@@ -1,10 +1,30 @@
 import win32gui
 import numpy as np
 
+def get_active_window():
+    def callback(hWnd,lParam):
+        is_visible = win32gui.GetWindowLong(hWnd,win32con.GWL_STYLE) & win32con.WS_VISIBLE
+        if not is_visible:
+            return True
+        
+        length = win32gui.GetWindowTextLength(hWnd)
+        if (length == 0):
+            return True
+        windowTitle = win32gui.GetWindowText(hWnd)
+        callback._titleList.append(windowTitle)
+        callback._hWndList.append(hWnd)
+
+        return True
+    callback._titleList = []
+    callback._hWndList = []
+    win32gui.EnumWindows(callback,None)
+    return callback._titleList,callback._hWndList
+
 def get_hWnd_by_name(name):
     def callback(hWnd,lParam):
         
-        if not win32gui.IsWindowVisible(hWnd):
+        is_visible = win32gui.GetWindowLong(hWnd,win32con.GWL_STYLE) & win32con.WS_VISIBLE
+        if not is_visible:
             return True
         
         length = win32gui.GetWindowTextLength(hWnd)
@@ -64,7 +84,7 @@ def get_screenshot_by_hwnd(hWnd,call_front=False,is_backgroud=False):
         # what is DC : https://blog.csdn.net/tc1175307496/article/details/52708832
         
         rect = win32gui.GetWindowRect(hWnd)
-        print('window rect is:' , rect)
+        #print('window rect is:' , rect)
         w = rect[2] - rect[0]
         h = rect[3] - rect[1]
 

@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import onnx
 import onnxruntime
 #import torch
 import time
@@ -7,16 +8,40 @@ import random
 
 import os
 import shutil
+import pickle
+
+# For multiprocessing , refer: https://zhuanlan.zhihu.com/p/410931545
+# pickle 大概会占70ms
+
+class WrapInferenceSession:
+
+    def __init__(self, onnx_path):
+        onnx_bytes = onnx.load_model(onnx_path)
+        self.sess = onnxruntime.InferenceSession(onnx_bytes.SerializeToString())
+        self.onnx_bytes = onnx_bytes
+
+    def run(self, *args, **kwargs):
+        return self.sess.run(*args,**kwargs)
+
+    def __getstate__(self):
+        return {'onnx_bytes': self.onnx_bytes}
+
+    def __setstate__(self, values):
+        self.onnx_bytes = values['onnx_bytes']
+        self.sess = onnxruntime.InferenceSession(self.onnx_bytes.SerializeToString(),providers=['CPUExecutionProvider'])
 
 class YOLOV5_ONNX(object):
     def __init__(self,aim_onnx_path, alert_onnx_path):
         self.aim_onnx_session=onnxruntime.InferenceSession(aim_onnx_path,providers=['CPUExecutionProvider'])
-        self.aim_input_name=self.get_input_name(self.aim_onnx_session)
-        self.aim_output_name=self.get_output_name(self.aim_onnx_session)
+        #self.aim_onnx_session=pickle.dumps(WrapInferenceSession(aim_onnx_path))
+        self.aim_input_name=['images']
+        self.aim_output_name=['output0']
 
         self.alert_onnx_session=onnxruntime.InferenceSession(alert_onnx_path,providers=['CPUExecutionProvider'])
-        self.alert_input_name=self.get_input_name(self.alert_onnx_session)
-        self.alert_output_name=self.get_output_name(self.alert_onnx_session)      
+        #self.alert_onnx_session=pickle.dumps(WrapInferenceSession(alert_onnx_path))
+        self.alert_input_name=['images']
+        self.alert_output_name=['output0']
+
 
         self.aim_size = 640
         self.alert_size = 384
@@ -239,17 +264,18 @@ class YOLOV5_ONNX(object):
 
         start=time.time()
         input_feed=self.get_input_feed(self.aim_input_name,img)
+        #pred=pickle.loads(self.aim_onnx_session).run(output_names=self.aim_output_name,input_feed=input_feed)
         pred=self.aim_onnx_session.run(output_names=self.aim_output_name,input_feed=input_feed)
 
         #results = torch.tensor(pred)
         results = np.array(pred)
         cast = time.time() - start
-        print("瞄准网络耗时:{}".format(cast))
+        #print("瞄准网络耗时:{}".format(cast))
 
 
         results = self.nms(results, conf_thres, iou_thres)
         cast=time.time()-start
-        print("瞄准检测耗时:{}".format(cast))
+        #print("瞄准检测耗时:{}".format(cast))
 
         img_shape=img.shape[2:]
         #print(img_size)
@@ -290,17 +316,18 @@ class YOLOV5_ONNX(object):
 
         start=time.time()
         input_feed=self.get_input_feed(self.alert_input_name,img)
+        #pred=pickle.loads(self.alert_onnx_session).run(output_names=self.alert_output_name,input_feed=input_feed)
         pred=self.alert_onnx_session.run(output_names=self.alert_output_name,input_feed=input_feed)
 
         #results = torch.tensor(pred)
         results = np.array(pred)
         cast = time.time() - start
-        print("弱点网络耗时:{}".format(cast))
+        #print("弱点网络耗时:{}".format(cast))
 
 
         results = self.nms(results, conf_thres, iou_thres)
         cast=time.time()-start
-        print("弱点检测耗时:{}".format(cast))
+        #print("弱点检测耗时:{}".format(cast))
 
         img_shape=img.shape[2:]
         #print(img_size)
@@ -319,10 +346,10 @@ class YOLOV5_ONNX(object):
     def plot_one_box(self,x, img, color=None, label=None, line_thickness=None):
         # Plots one bounding box on image img
         tl = line_thickness or round(0.002 * (img.shape[0] + img.shape[1]) / 2) + 2  # line/font thickness
-        print(tl)
+        #print(tl)
         color = color or [random.randint(0, 255) for _ in range(3)]
         c1, c2 = (int(x[0]), int(x[1])), (int(x[2]), int(x[3]))
-        print(c1,c2)
+        #print(c1,c2)
         cv2.rectangle(img, c1, c2, color, thickness=tl, lineType=cv2.LINE_AA)
         if label:
             tf = max(tl - 1, 1)  # font thickness
@@ -338,7 +365,7 @@ class YOLOV5_ONNX(object):
         if not boxinfo is None and len(boxinfo):
             for *xyxy, conf, cls in boxinfo:
                 label = '%s %.2f' % (label_map[int(cls)], conf)
-                print('xyxy: ', xyxy)
+                #print('xyxy: ', xyxy)
                 self.plot_one_box(xyxy, img, label=label, color=colors[int(cls)], line_thickness=1)
 
         cv2.imwrite(os.path.join(self.record_log,'{}.jpg'.format(self.frame_cnt)), img)
