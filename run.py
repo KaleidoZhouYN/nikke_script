@@ -8,11 +8,13 @@ import types
 import win32gui
 import os
 import subprocess,signal
+from PIL import Image
+import numpy as np
 
 from pynput.keyboard import Key, Controller
 
 from utils.win import get_active_window
-# form utils.simulator import (Simulator, MuMuX, Leidian)
+from utils.win import get_screenshot_by_hwnd
 
 from config import config
 
@@ -61,6 +63,16 @@ class Nikke_Toolkit(QWidget):
 
         self.active_window_combo.activated[str].connect(onActivated)
 
+    def add_screenshot(self):
+        btn1 = QPushButton("点击此处测试模拟器截图",self)
+        btn1.move(50,70)
+
+        def screenshot():
+            img = get_screenshot_by_hwnd(self.simulator_hWnd,0,1)
+            PIL_image = Image.fromarray(np.uint8(img[:,:,::-1]))
+            PIL_image.show()
+
+        btn1.clicked.connect(screenshot)
 
     def select_simulator(self):
         keywords = ['MuMu',r'雷电']
@@ -82,7 +94,7 @@ class Nikke_Toolkit(QWidget):
     def add_battle_S(self):
         self.battle_s_process = None
         text = QLabel("拦截S自动瞄准,按f可以进入/解除防御状态",self)
-        text.move(50,70)
+        text.move(50,100)
         btn1 = QPushButton("开始",self)
         btn2 = QPushButton("结束",self)
 
@@ -106,19 +118,20 @@ class Nikke_Toolkit(QWidget):
         btn1.clicked.connect(start_battle_s)
         btn2.clicked.connect(end_battle_s)
 
-        btn1.move(50,90)
-        btn2.move(200,90)
+        btn1.move(50,120)
+        btn2.move(200,120)
 
         drill = QCheckBox('优先瞄准钻头(未实现）',self)
-        drill.move(50,120)
+        drill.move(50,150)
 
         defend = QCheckBox('自动防御(未实现)',self)
-        defend.move(200,120)
+        defend.move(200,150)
 
 
 
     def initUI(self):
         self.add_active_window()
+        self.add_screenshot()
         self.add_battle_S()
 
         self.setGeometry(300, 300, 400, 200)

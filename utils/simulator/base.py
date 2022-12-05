@@ -37,7 +37,20 @@ class Simulator(object):
         
 
     def get_ctl_hWnd(self):
-        self.ctl_hWnd = self.top_hWnd
+        def callback(hWnd,lParam):
+            length = win32gui.GetWindowTextLength(hWnd)
+            if (length == 0):
+                return True
+            #windowTitle = win32gui.GetWindowText(hWnd)
+            callback._hWndList.append(hWnd)
+
+            return True
+        callback._hWndList = []
+        win32gui.EnumChildWindows(self.top_hWnd,callback,None)
+        if len(callback._hWndList):
+            self.ctl_hWnd = callback._hWndList[0]
+        else:
+            self.ctl_hWnd = self.top_hWnd
 
     def screenshot(self):
         start=time.time()
