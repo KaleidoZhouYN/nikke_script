@@ -101,7 +101,7 @@ class Nikke_Toolkit(QWidget):
 
         # refer: https://stackoverflow.com/questions/4789837/how-to-terminate-a-python-subprocess-launched-with-shell-true
         def start_battle_s():
-            self.battle_s_process = subprocess.Popen(["python","simulator_test.py","--simulator_name",self.simulator_name,
+            self.battle_s_process = subprocess.Popen(["simulator_test","--simulator_name",self.simulator_name,
              "--hWnd",str(self.simulator_hWnd)], 
                         stdin = subprocess.PIPE,
                         stdout=None, 

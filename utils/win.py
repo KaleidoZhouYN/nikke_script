@@ -58,7 +58,9 @@ import win32ui
 def setForeground(hWnd):
     if hWnd != win32gui.GetForegroundWindow():
         # why call SendMessage: https://blog.csdn.net/weixin_30299539/article/details/96321161
-        win32gui.SendMessage(hWnd, win32con.WM_SYSCOMMAND, win32con.SC_RESTORE, 0)
+        shell = win32com.client.Dispatch("WScript.Shell")
+        shell.SendKeys('%')
+        #win32gui.SendMessage(hWnd, win32con.WM_SYSCOMMAND, win32con.SC_RESTORE, 0)
         win32gui.SetForegroundWindow(hWnd)
     return 1
 
