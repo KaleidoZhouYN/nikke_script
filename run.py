@@ -24,6 +24,8 @@ class Nikke_Toolkit(QWidget):
     def __init__(self):
         super().__init__()
         self.keyboard = Controller()
+        self.simulator_hWnd = None
+        self.select_title = None
         self.initUI()
 
     def add_active_window(self):
@@ -101,13 +103,19 @@ class Nikke_Toolkit(QWidget):
 
         # refer: https://stackoverflow.com/questions/4789837/how-to-terminate-a-python-subprocess-launched-with-shell-true
         def start_battle_s():
-            self.battle_s_process = subprocess.Popen(["simulator_test","--simulator_name",self.simulator_name,
-             "--hWnd",str(self.simulator_hWnd)], 
-                        stdin = subprocess.PIPE,
-                        stdout=None, 
-                       shell=True, 
-                       close_fds=True,
-                       creationflags=subprocess.CREATE_NEW_PROCESS_GROUP) 
+            if not self.simulator_hWnd is None:
+                self.battle_s_process = subprocess.Popen(["simulator_test","--simulator_name",self.simulator_name,
+                "--hWnd",str(self.simulator_hWnd)], 
+                            stdin = subprocess.PIPE,
+                            stdout=None, 
+                        shell=True, 
+                        close_fds=True,
+                        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP) 
+            else:
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Information)    
+                msg.setText("请先选择模拟器")
+                msg.exec()            
 
         def end_battle_s():
             if self.battle_s_process:
