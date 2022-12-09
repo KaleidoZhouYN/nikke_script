@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
-import onnx
-import onnxruntime
+#import onnx
+import onnxruntime as rt
 #import torch
 import time
 import random
@@ -13,11 +13,12 @@ import pickle
 # For multiprocessing , refer: https://zhuanlan.zhihu.com/p/410931545
 # pickle 大概会占70ms
 
+"""
 class WrapInferenceSession:
 
     def __init__(self, onnx_path):
         onnx_bytes = onnx.load_model(onnx_path)
-        self.sess = onnxruntime.InferenceSession(onnx_bytes.SerializeToString())
+        self.sess = rt.InferenceSession(onnx_bytes.SerializeToString())
         self.onnx_bytes = onnx_bytes
 
     def run(self, *args, **kwargs):
@@ -28,16 +29,25 @@ class WrapInferenceSession:
 
     def __setstate__(self, values):
         self.onnx_bytes = values['onnx_bytes']
-        self.sess = onnxruntime.InferenceSession(self.onnx_bytes.SerializeToString(),providers=['CPUExecutionProvider'])
+        self.sess = rt.InferenceSession(self.onnx_bytes.SerializeToString(),providers=['CPUExecutionProvider'])
+"""
 
 class YOLOV5_ONNX(object):
-    def __init__(self,aim_onnx_path, alert_onnx_path):
-        self.aim_onnx_session=onnxruntime.InferenceSession(aim_onnx_path,providers=['CPUExecutionProvider'])
+    def __init__(self,config):
+        # onnxruntime Session Options
+
+        sess_options = rt.SessionOptions()
+        sess_options.intra_op_num_threads = config.onnx_num_thread
+        sess_options.execution_mode = rt.ExecutionMode.ORT_SEQUENTIAL
+        sess_options.graph_optimization_level = rt.GraphOptimizationLevel.ORT_ENABLE_ALL
+
+
+        self.aim_onnx_session=rt.InferenceSession(config.aim_onnx_path,providers=['CPUExecutionProvider'])
         #self.aim_onnx_session=pickle.dumps(WrapInferenceSession(aim_onnx_path))
         self.aim_input_name=['images']
         self.aim_output_name=['output0']
 
-        self.alert_onnx_session=onnxruntime.InferenceSession(alert_onnx_path,providers=['CPUExecutionProvider'])
+        self.alert_onnx_session=rt.InferenceSession(config.alert_onnx_path,providers=['CPUExecutionProvider'])
         #self.alert_onnx_session=pickle.dumps(WrapInferenceSession(alert_onnx_path))
         self.alert_input_name=['images']
         self.alert_output_name=['output0']
@@ -374,8 +384,14 @@ class YOLOV5_ONNX(object):
 
 
 if __name__=="__main__":
-    model=YOLOV5_ONNX(aim_onnx_path="./yolov5n_640.onnx",alert_onnx_path='./yolov5t2_384.onnx')
+    from easydict import EasyDict as edict
+    config = edict()
+    config.aim_onnx_path = "./yolov5n_640.onnx"
+    config.alert_onnx_path = './yolov5t2_384.onnx'
+    config.onnx_num_thread=2
+    model=YOLOV5_ONNX(config)
     img_path="1_371.jpg"
     img = cv2.imread(img_path) # BGR
-    print(model.infer_aim(img))
-    print(model.infer_alert(img))
+    for i in range(100):
+        print(model.infer_aim(img))
+        print(model.infer_alert(img))

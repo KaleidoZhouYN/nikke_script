@@ -22,7 +22,7 @@ class Simulator(object):
         self.get_ctl_hWnd()
 
         self.config = config
-        self.detector = YOLOV5_ONNX(config.aim_onnx_path,config.alert_onnx_path)
+        self.detector = YOLOV5_ONNX(config)
 
         rect = win32gui.GetWindowRect(self.ctl_hWnd)
         self.center = np.array([int(rect[2]-rect[0])//2, int(rect[3]-rect[1])//2])
