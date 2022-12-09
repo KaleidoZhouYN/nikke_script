@@ -12,8 +12,7 @@ import numpy as np
 
 from pynput.keyboard import Key, Controller
 
-from utils.win import get_active_window
-from utils.win import get_screenshot_by_hwnd
+from utils.win import get_active_window, get_screenshot_by_hwnd,getChildhWnd
 
 from config import config
 
@@ -97,16 +96,30 @@ class Nikke_Toolkit(QWidget):
         self.active_window_combo.activated[str].connect(onActivated)
 
     def add_screenshot(self):
-        btn1 = QPushButton("点击此处测试模拟器截图",self)
+        btn1 = QPushButton("此处测试模拟器截图",self)
         btn1.move(50,70)
         self.regist(btn1)
 
-        def screenshot():
+        def screenshot_top():
             img = get_screenshot_by_hwnd(self.simulator_hWnd,0,1)
             PIL_image = Image.fromarray(np.uint8(img[:,:,::-1]))
             PIL_image.show()
 
-        btn1.clicked.connect(screenshot)
+        btn1.clicked.connect(screenshot_top)
+
+        btn2 = QPushButton("此处测试控制窗口截图",self)
+        btn2.move(200,70)
+        self.regist(btn2)
+
+        def screenshot_ctl():
+            img = get_screenshot_by_hwnd(self.simulator_hWnd,0,1)
+            top_rect = win32gui.GetWindowRect(self.simulator_hWnd)
+            childhWnd = getChildhWnd(self.simulator_hWnd)
+            ctl_rect = win32gui.GetWindowRect(childhWnd)
+            img = img[ctl_rect[1]-top_rect[1]:ctl_rect[3]-top_rect[1], ctl_rect[0]-top_rect[0]:ctl_rect[2]-top_rect[0]]
+            PIL_image = Image.fromarray(np.uint8(img[:,:,::-1]))
+            PIL_image.show()   
+        btn2.clicked.connect(screenshot_ctl)         
 
     def select_simulator(self):
         keywords = ['MuMu',r'雷电']

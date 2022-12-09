@@ -64,18 +64,31 @@ def setForeground(hWnd):
         win32gui.SetForegroundWindow(hWnd)
     return 1
 
-from PIL import ImageGrab
-def winShot(hWnd):
-    rect = win32gui.GetWindowRect(hWnd)
-    img = ImageGrab.grab(rect) # [RGB]
-    return img
+def getChildhWnd(hWnd):
+    def callback(hWnd,lParam):
+        length = win32gui.GetWindowTextLength(hWnd)
+        if (length == 0):
+            return True
+        #windowTitle = win32gui.GetWindowText(hWnd)
+        callback._hWndList.append(hWnd)
 
+        return True
+    callback._hWndList = []
+    win32gui.EnumChildWindows(hWnd,callback,None)
+    if len(callback._hWndList):
+        return callback._hWndList[0]
+    else:
+        return hWnd
+
+from PIL import ImageGrab
 from ctypes import windll
 from PIL import Image
+
 def get_screenshot_by_hwnd(hWnd,call_front=False,is_backgroud=False):
     if not is_backgroud:
         if call_front and setForeground(hWnd):
-            img = winShot(hWnd)
+            rect = win32gui.GetWindowRect(hWnd)
+            img = ImageGrab.grab(rect) # [RGB]
             img = np.asarray(img)[:,:,::-1]  # [BGR]
             return img
         else:

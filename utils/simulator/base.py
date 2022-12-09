@@ -6,7 +6,7 @@ import numpy as np
 import win32gui
 from utils import mouse
 from utils.yolov5.yolov5_onnx import YOLOV5_ONNX
-from utils.win import get_screenshot_by_hwnd,setForeground
+from utils.win import get_screenshot_by_hwnd,setForeground,getChildhWnd
 
 import cv2
 import time
@@ -37,20 +37,8 @@ class Simulator(object):
         
 
     def get_ctl_hWnd(self):
-        def callback(hWnd,lParam):
-            length = win32gui.GetWindowTextLength(hWnd)
-            if (length == 0):
-                return True
-            #windowTitle = win32gui.GetWindowText(hWnd)
-            callback._hWndList.append(hWnd)
+        return getChildhWnd(self.top_hWnd)
 
-            return True
-        callback._hWndList = []
-        win32gui.EnumChildWindows(self.top_hWnd,callback,None)
-        if len(callback._hWndList):
-            self.ctl_hWnd = callback._hWndList[0]
-        else:
-            self.ctl_hWnd = self.top_hWnd
 
     def screenshot(self):
         start=time.time()
@@ -60,7 +48,6 @@ class Simulator(object):
         
         # 这里我们实际要得到控制窗口的截图
         img = img[self.ctl_rect[1]-self.top_rect[1]:self.ctl_rect[3]-self.top_rect[1], self.ctl_rect[0]-self.top_rect[0]:self.ctl_rect[2]-self.top_rect[0]]
-        #cv2.imwrite('screenshot.jpg',img)
         return img
 
     def move_cur_center(self):
