@@ -14,6 +14,8 @@ import numpy as np
 from pynput.keyboard import Key, Controller
 
 from utils.win import get_active_window, get_screenshot_by_hwnd,getChildhWnd
+import simulator_test
+import threading
 import time
 
 from config import config
@@ -136,22 +138,8 @@ class Nikke_Toolkit(QWidget):
         if not is_match:
             self.simulator_name = 'other'
 
-    def closeEvent(self, event):
-        """
-        if self.battle_s_process:
-            self.keyboard.press('c')
-            self.keyboard.release('c')
-        """
-
-        # kill the subprocess, refer : https://stackoverflow.com/questions/4084322/killing-a-process-created-with-pythons-subprocess-popen
-        if self.battle_s_process and self.battle_s_process.poll() is None:
-            os.kill(self.battle_s_process.pid, signal.CTRL_BREAK_EVENT)
-        self.battle_s_process = None
-
-        super().closeEvent(event)
-
     def add_battle_S(self):
-        self.battle_s_process = None
+        self.battle_s_thread = None
         text = QLabel("拦截S自动瞄准,按f可以进入/解除防御状态",self)
         text.move(50,100)
         self.regist(text)
@@ -160,52 +148,16 @@ class Nikke_Toolkit(QWidget):
         btn1.move(50,120)
         self.regist(btn1)
 
-        btn2 = QPushButton("结束脚本",self)
-        btn2.move(200,120)
-        self.regist(btn2)
-
         # refer: https://stackoverflow.com/questions/4789837/how-to-terminate-a-python-subprocess-launched-with-shell-true
         def start_battle_s():
-            if self.battle_s_process and self.battle_s_process.poll() is None:
-                self.release_msg("拦截战S脚本已启动，请先点结束脚本")
+            try:
+                self.simulator = simulator_test.get_simulator(self.simulator_name,self.simulator_hWnd,config)
+            except:
+                self.release_msg("脚本启动错误")
                 return
-            """
-            self.battle_s_process = subprocess.Popen(["simulator_test","--simulator_name",self.simulator_name,
-             "--hWnd",str(self.simulator_hWnd)], 
-                        stdin = subprocess.PIPE,
-                        stdout=None, 
-                       shell=True, 
-                       close_fds=True,
-                       creationflags=subprocess.CREATE_NEW_PROCESS_GROUP) 
-            """
-            self.battle_s_process = subprocess.Popen(["python","simulator_test.py","--simulator_name",self.simulator_name,
-             "--hWnd",str(self.simulator_hWnd)], 
-                        stdin = subprocess.PIPE,
-                        stdout=None, 
-                       shell=True, 
-                       close_fds=True,
-                       creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
-
-            time.sleep(1)
-
-            if self.battle_s_process.poll() is None:
-                self.release_msg("拦截战S脚本已启动")
-            else:
-                self.release_msg("拦截战S脚本启动失败，请重试")  
-            
-
-        def end_battle_s():
-            """
-            if self.battle_s_process:
-                self.keyboard.press('c')
-                self.keyboard.release('c')
-            """
-            if self.battle_s_process and self.battle_s_process.poll() is None:
-                os.kill(self.battle_s_process.pid, signal.CTRL_BREAK_EVENT)
-            self.battle_s_process = None
+            self.release_msg("脚本启动成功")
 
         btn1.clicked.connect(start_battle_s)
-        btn2.clicked.connect(end_battle_s)
 
         btn3 = QPushButton("开始瞄准",self)
         btn3.move(50,150)
@@ -216,14 +168,17 @@ class Nikke_Toolkit(QWidget):
         self.regist(btn4)
 
         def start_aim():
-            self.keyboard.press('s')
-            time.sleep(0.2)
-            self.keyboard.release('s')
+            if self.battle_s_thread is None:
+                self.battle_s_thread = threading.Thread(target = self.simulator.start_simulation(),args=(),daemon=True)
+                self.battle_s_thread.start()
 
         def end_aim():
             self.keyboard.press('e')
             time.sleep(0.2)
             self.keyboard.release('e')
+            #self.battle_s_thread.join()
+
+            self.battle_s_thread = None
 
         btn3.clicked.connect(start_aim)
         btn4.clicked.connect(end_aim)
