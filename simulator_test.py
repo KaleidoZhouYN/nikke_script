@@ -15,10 +15,13 @@ def parser():
 
     return args
 
+# datas=[('C:\\Python310\\Lib\\site-packages\\onnxruntime\\capi\\onnxruntime_providers_shared.dll','onnxruntime\\capi')]
+
 s_map =  {'MuMu':MuMuX,r'雷电':Leidian,'other':Simulator}
 if __name__ == '__main__':
     args = parser()
     simulator = s_map[args.simulator_name]
     sim = simulator(args.hWnd,config)
 
-    sim.start_simulation()
+    while True:
+        sim.start_simulation()

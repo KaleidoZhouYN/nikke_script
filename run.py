@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import (QWidget,  QApplication,
     QSizePolicy)
 
 import sys
+import signal
 import types
 import win32gui
 import os
@@ -13,6 +14,7 @@ import numpy as np
 from pynput.keyboard import Key, Controller
 
 from utils.win import get_active_window, get_screenshot_by_hwnd,getChildhWnd
+import time
 
 from config import config
 
@@ -30,6 +32,11 @@ class Nikke_Toolkit(QWidget):
         self.oldsize = [oldsize.width(),oldsize.height()]
         self.initUI()
 
+    def release_msg(self,text):
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Information)
+        msg.setText(text)
+        msg.exec()
 
     def regist(self,com):
         # 适应字体大小
@@ -81,14 +88,10 @@ class Nikke_Toolkit(QWidget):
             self.select_title = text
             # 检测是否在print(text)
             self.simulator_hWnd = win32gui.FindWindow(0,text)
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Information)
             if self.simulator_hWnd:
-                msg.setText("已找到选择的模拟器")
-                msg.exec()
+                self.release_msg("已找到选择的模拟器")
             else:
-                msg.setText("未找到选择的模拟器，请重试")
-                msg.exec()
+                self.release_msg("未找到选择的模拟器，请重试")
                 return 
             
             self.select_simulator()
@@ -134,9 +137,18 @@ class Nikke_Toolkit(QWidget):
             self.simulator_name = 'other'
 
     def closeEvent(self, event):
+        """
         if self.battle_s_process:
             self.keyboard.press('c')
             self.keyboard.release('c')
+        """
+
+        # kill the subprocess, refer : https://stackoverflow.com/questions/4084322/killing-a-process-created-with-pythons-subprocess-popen
+        if self.battle_s_process and self.battle_s_process.poll() is None:
+            os.kill(self.battle_s_process.pid, signal.CTRL_BREAK_EVENT)
+        self.battle_s_process = None
+
+        super().closeEvent(event)
 
     def add_battle_S(self):
         self.battle_s_process = None
@@ -144,16 +156,20 @@ class Nikke_Toolkit(QWidget):
         text.move(50,100)
         self.regist(text)
 
-        btn1 = QPushButton("开始",self)
+        btn1 = QPushButton("启动脚本",self)
         btn1.move(50,120)
         self.regist(btn1)
 
-        btn2 = QPushButton("结束",self)
+        btn2 = QPushButton("结束脚本",self)
         btn2.move(200,120)
         self.regist(btn2)
 
         # refer: https://stackoverflow.com/questions/4789837/how-to-terminate-a-python-subprocess-launched-with-shell-true
         def start_battle_s():
+            if self.battle_s_process and self.battle_s_process.poll() is None:
+                self.release_msg("拦截战S脚本已启动，请先点结束脚本")
+                return
+            """
             self.battle_s_process = subprocess.Popen(["simulator_test","--simulator_name",self.simulator_name,
              "--hWnd",str(self.simulator_hWnd)], 
                         stdin = subprocess.PIPE,
@@ -161,25 +177,63 @@ class Nikke_Toolkit(QWidget):
                        shell=True, 
                        close_fds=True,
                        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP) 
+            """
+            self.battle_s_process = subprocess.Popen(["python","simulator_test.py","--simulator_name",self.simulator_name,
+             "--hWnd",str(self.simulator_hWnd)], 
+                        stdin = subprocess.PIPE,
+                        stdout=None, 
+                       shell=True, 
+                       close_fds=True,
+                       creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
+
+            time.sleep(1)
+
+            if self.battle_s_process.poll() is None:
+                self.release_msg("拦截战S脚本已启动")
+            else:
+                self.release_msg("拦截战S脚本启动失败，请重试")  
+            
 
         def end_battle_s():
+            """
             if self.battle_s_process:
                 self.keyboard.press('c')
                 self.keyboard.release('c')
+            """
+            if self.battle_s_process and self.battle_s_process.poll() is None:
+                os.kill(self.battle_s_process.pid, signal.CTRL_BREAK_EVENT)
             self.battle_s_process = None
 
         btn1.clicked.connect(start_battle_s)
         btn2.clicked.connect(end_battle_s)
 
-        
-        
+        btn3 = QPushButton("开始瞄准",self)
+        btn3.move(50,150)
+        self.regist(btn3)
+
+        btn4 = QPushButton("结束瞄准",self)
+        btn4.move(200,150)
+        self.regist(btn4)
+
+        def start_aim():
+            self.keyboard.press('s')
+            time.sleep(0.2)
+            self.keyboard.release('s')
+
+        def end_aim():
+            self.keyboard.press('e')
+            time.sleep(0.2)
+            self.keyboard.release('e')
+
+        btn3.clicked.connect(start_aim)
+        btn4.clicked.connect(end_aim)
 
         drill = QCheckBox('优先瞄准钻头(未实现）',self)
-        drill.move(50,150)
+        drill.move(50,175)
         self.regist(drill)
 
         defend = QCheckBox('自动防御(未实现)',self)
-        defend.move(200,150)
+        defend.move(200,175)
         self.regist(defend)
 
 
