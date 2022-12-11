@@ -54,7 +54,7 @@ class Simulator(object):
   
 
     def get_ctl_hWnd(self):
-        self.get_ctl_hWnd = getChildhWnd(self.top_hWnd)
+        self.ctl_hWnd = getChildhWnd(self.top_hWnd)
 
 
     def screenshot(self):
