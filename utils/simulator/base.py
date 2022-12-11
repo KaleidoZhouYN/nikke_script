@@ -24,7 +24,7 @@ class Simulator(object):
         self.logger.setLevel(logging.INFO)
         os.makedirs("./logs",exist_ok=True)
         f_handler = logging.FileHandler(filename='./logs/simulutor.txt',
-                                    mode = 'a',
+                                    mode = 'w',
                                     encoding='utf-8')
         self.logger.addHandler(f_handler)
 
@@ -61,7 +61,7 @@ class Simulator(object):
         start=time.time()
         img = get_screenshot_by_hwnd(self.top_hWnd,0,1)
         cast = time.time() - start
-        self.logger.info('模拟器截图 耗时:{:.4f}ms'.format(cast*1000))
+        #self.logger.info('模拟器截图 耗时:{:.4f}ms'.format(cast*1000))
         
         # 这里我们实际要得到控制窗口的截图
         img = img[self.ctl_rect[1]-self.top_rect[1]:self.ctl_rect[3]-self.top_rect[1], self.ctl_rect[0]-self.top_rect[0]:self.ctl_rect[2]-self.top_rect[0]]
@@ -118,7 +118,7 @@ class Simulator(object):
         aim_box_center = self.mouse_point + self._offset
         img = self.screenshot()
         det = self.detector.infer_alert(img)
-        self.logger.info('弱点检测总耗时 : {}'.format(time.time()-start))
+        #self.logger.info('弱点检测总耗时 : {}'.format(time.time()-start))
 
         # find nearest alert
         x , min_dis = None, 1e9
@@ -192,10 +192,13 @@ class Simulator(object):
                 self.logger.info("结束自动瞄准")
                 self.left_up()
                 self._offset = None
-                return
+                key_press.start = 0
+                key_press.quit = 0
+                return 
             if key_press.defend:
                 self.defend()
                 key_press.defend = 0
+                continue
             if self.is_defend:
                 # 仍然在防御姿态
                 time.sleep(0.2)

@@ -60,11 +60,12 @@ class YOLOV5_ONNX(object):
         self.h_croprate = 0.6
 
         self.is_record = False
-        self.record_log = './detect_log'
-        if os.path.exists(self.record_log):
-            shutil.rmtree(self.record_log)
-        os.mkdir(self.record_log)
-        self.frame_cnt = 0
+        if self.is_record:
+            self.record_log = './detect_log'
+            if os.path.exists(self.record_log):
+                shutil.rmtree(self.record_log)
+            os.mkdir(self.record_log)
+            self.frame_cnt = 0
 
 
 

@@ -169,7 +169,7 @@ class Nikke_Toolkit(QWidget):
             if self.battle_s_process and self.battle_s_process.poll() is None:
                 self.release_msg("拦截战S脚本已启动，请先点结束脚本")
                 return
-            """
+            
             self.battle_s_process = subprocess.Popen(["simulator_test","--simulator_name",self.simulator_name,
              "--hWnd",str(self.simulator_hWnd)], 
                         stdin = subprocess.PIPE,
@@ -177,6 +177,7 @@ class Nikke_Toolkit(QWidget):
                        shell=True, 
                        close_fds=True,
                        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP) 
+            
             """
             self.battle_s_process = subprocess.Popen(["python","simulator_test.py","--simulator_name",self.simulator_name,
              "--hWnd",str(self.simulator_hWnd)], 
@@ -185,7 +186,7 @@ class Nikke_Toolkit(QWidget):
                        shell=True, 
                        close_fds=True,
                        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
-
+            """
             time.sleep(1)
 
             if self.battle_s_process.poll() is None:
@@ -217,12 +218,10 @@ class Nikke_Toolkit(QWidget):
 
         def start_aim():
             self.keyboard.press('s')
-            time.sleep(0.2)
             self.keyboard.release('s')
 
         def end_aim():
             self.keyboard.press('e')
-            time.sleep(0.2)
             self.keyboard.release('e')
 
         btn3.clicked.connect(start_aim)
