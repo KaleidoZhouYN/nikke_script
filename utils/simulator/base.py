@@ -118,7 +118,7 @@ class Simulator(object):
         aim_box_center = self.mouse_point + self._offset
         img = self.screenshot()
         det = self.detector.infer_alert(img)
-        self.logger.info('弱点检测总耗时 : ',time.time()-start)
+        self.logger.info('弱点检测总耗时 : {}'.format(time.time()-start))
 
         # find nearest alert
         x , min_dis = None, 1e9
