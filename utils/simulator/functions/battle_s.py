@@ -8,6 +8,8 @@ def init(self):
     self.miss_aim_cnt = 0
     self.is_defend = 0
     self._start_aim = 0
+    self._end_aim = 0
+    self._defend = 0
     self.detector = YOLOV5_ONNX(self.config)
 
 def fix_aim_offset(self):
@@ -99,7 +101,7 @@ def start(self):
             self._end_aim = 0
             return
         if self._defend:
-            self.defend()
+            defend(self)
             self._defend = 0
             continue
         if self.is_defend:
@@ -107,8 +109,8 @@ def start(self):
             time.sleep(0.2)
             continue
   
-        self.turnoff_auto_aiming()
+        turnoff_auto_aiming(self)
         if self._offset is None:
-            self.fix_aim_offset()
+            fix_aim_offset(self)
         else:
-            self.aim_alert()
+            aim_alert(self)

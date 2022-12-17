@@ -147,21 +147,21 @@ class Nikke_Toolkit(QWidget):
     def add_battle_S(self):
         self.sim_process = None
         text = QLabel("拦截S自动瞄准,按f可以进入/解除防御状态",self)
-        text.move(50,100)
+        text.move(50,130)
         self.regist(text)
 
         btn1 = QPushButton("启动脚本",self)
-        btn1.move(50,120)
+        btn1.move(50,100)
         self.regist(btn1)
 
         btn2 = QPushButton("结束脚本",self)
-        btn2.move(200,120)
+        btn2.move(200,100)
         self.regist(btn2)
 
         # refer: https://stackoverflow.com/questions/4789837/how-to-terminate-a-python-subprocess-launched-with-shell-true
         def start_battle_s():
             if self.sim_process and self.sim_process.poll() is None:
-                self.release_msg("拦截战S脚本已启动，请先点结束脚本")
+                self.release_msg("脚本已启动，请先点结束脚本")
                 return
             
             
@@ -185,9 +185,9 @@ class Nikke_Toolkit(QWidget):
             time.sleep(1)
 
             if self.sim_process.poll() is None:
-                self.release_msg("拦截战S脚本已启动")
+                self.release_msg("脚本已启动")
             else:
-                self.release_msg("拦截战S脚本启动失败，请重试")  
+                self.release_msg("脚本启动失败，请重试")  
             
 
         def end_battle_s():
