@@ -6,22 +6,12 @@ from utils.simulator.base import Simulator
 from utils.simulator.MuMuX import MuMuX
 from utils.simulator.leidian import Leidian
 
-import argparse
-def parser():
-    parse = argparse.ArgumentParser()
-    parse.add_argument('--simulator_name',type=str)
-    parse.add_argument('--hWnd',type=int)
-    args = parse.parse_args()
 
-    return args
-
-# datas=[('C:\\Python310\\Lib\\site-packages\\onnxruntime\\capi\\onnxruntime_providers_shared.dll','onnxruntime\\capi')]
-
-s_map =  {'MuMu':MuMuX,r'雷电':Leidian,'other':Simulator}
+s_map =  {r'MuMu':MuMuX,r'雷电':Leidian,'other':Simulator}
 if __name__ == '__main__':
-    args = parser()
-    simulator = s_map[args.simulator_name]
-    sim = simulator(args.hWnd,config)
+    simulator_name = r'MuMu'
+    simulator = s_map[simulator_name]
+    hWnd = get_hWnd_by_name(simulator_name)
+    sim = simulator(hWnd,config)
 
-    while True:
-        sim.start_simulation()
+    sim.start()

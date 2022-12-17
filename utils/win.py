@@ -83,8 +83,12 @@ def getChildhWnd(hWnd):
 from PIL import ImageGrab
 from ctypes import windll
 from PIL import Image
+import cv2
 
 def get_screenshot_by_hwnd(hWnd,call_front=False,is_backgroud=False):
+    px = win32api.GetSystemMetrics(win32con.SM_CXSCREEN)
+    vx = win32api.GetSystemMetrics(win32con.SM_CXVIRTUALSCREEN)
+    factor = float(vx)/px
     if not is_backgroud:
         if call_front and setForeground(hWnd):
             rect = win32gui.GetWindowRect(hWnd)
@@ -99,16 +103,19 @@ def get_screenshot_by_hwnd(hWnd,call_front=False,is_backgroud=False):
         # what is DC : https://blog.csdn.net/tc1175307496/article/details/52708832
         
         rect = win32gui.GetWindowRect(hWnd)
+
         #print('window rect is:' , rect)
         w = rect[2] - rect[0]
         h = rect[3] - rect[1]
+
+        w_vir,h_vir = int(w*factor),int(h*factor)
 
         hWndDC = win32gui.GetWindowDC(hWnd)
         mfcDC = win32ui.CreateDCFromHandle(hWndDC)
         saveDC = mfcDC.CreateCompatibleDC()
 
         saveBitMap = win32ui.CreateBitmap()
-        saveBitMap.CreateCompatibleBitmap(mfcDC, w, h)
+        saveBitMap.CreateCompatibleBitmap(mfcDC, w_vir, h_vir)
 
         saveDC.SelectObject(saveBitMap)
 
@@ -128,6 +135,9 @@ def get_screenshot_by_hwnd(hWnd,call_front=False,is_backgroud=False):
         win32gui.ReleaseDC(hWnd,hWndDC)
         
         im = np.asarray(im)[:,:,::-1]
+
+        # 放缩回 primary 大小
+        im = cv2.resize(im,(w,h))
         return im
 
 

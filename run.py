@@ -25,7 +25,7 @@ class Nikke_Toolkit(QWidget):
         super().__init__()
         self.keyboard = Controller()
         self.components = []
-        self.setGeometry(300, 300, 400, 200)
+        self.setGeometry(300, 300, 400, 300)
         self.setWindowTitle('NIKKE_TOOLKIT')
 
         oldsize = self.size()
@@ -137,21 +137,15 @@ class Nikke_Toolkit(QWidget):
             self.simulator_name = 'other'
 
     def closeEvent(self, event):
-        """
-        if self.battle_s_process:
-            self.keyboard.press('c')
-            self.keyboard.release('c')
-        """
-
         # kill the subprocess, refer : https://stackoverflow.com/questions/4084322/killing-a-process-created-with-pythons-subprocess-popen
-        if self.battle_s_process and self.battle_s_process.poll() is None:
-            os.kill(self.battle_s_process.pid, signal.CTRL_BREAK_EVENT)
-        self.battle_s_process = None
+        if self.sim_process and self.sim_process.poll() is None:
+            os.kill(self.sim_process.pid, signal.CTRL_BREAK_EVENT)
+        self.bsim_process = None
 
         super().closeEvent(event)
 
     def add_battle_S(self):
-        self.battle_s_process = None
+        self.sim_process = None
         text = QLabel("拦截S自动瞄准,按f可以进入/解除防御状态",self)
         text.move(50,100)
         self.regist(text)
@@ -166,11 +160,12 @@ class Nikke_Toolkit(QWidget):
 
         # refer: https://stackoverflow.com/questions/4789837/how-to-terminate-a-python-subprocess-launched-with-shell-true
         def start_battle_s():
-            if self.battle_s_process and self.battle_s_process.poll() is None:
+            if self.sim_process and self.sim_process.poll() is None:
                 self.release_msg("拦截战S脚本已启动，请先点结束脚本")
                 return
             
-            self.battle_s_process = subprocess.Popen(["simulator_test","--simulator_name",self.simulator_name,
+            
+            self.sim_process = subprocess.Popen(["simulator_run","--simulator_name",self.simulator_name,
              "--hWnd",str(self.simulator_hWnd)], 
                         stdin = subprocess.PIPE,
                         stdout=None, 
@@ -179,31 +174,26 @@ class Nikke_Toolkit(QWidget):
                        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP) 
             
             """
-            self.battle_s_process = subprocess.Popen(["python","simulator_test.py","--simulator_name",self.simulator_name,
+            self.sim_process = subprocess.Popen(["python","simulator_run.py","--simulator_name",self.simulator_name,
              "--hWnd",str(self.simulator_hWnd)], 
                         stdin = subprocess.PIPE,
-                        stdout=None, 
+                        stdout=subprocess.PIPE, 
+                        stderr=subprocess.PIPE,
                        shell=True, 
-                       close_fds=True,
                        creationflags=subprocess.CREATE_NEW_PROCESS_GROUP)
             """
             time.sleep(1)
 
-            if self.battle_s_process.poll() is None:
+            if self.sim_process.poll() is None:
                 self.release_msg("拦截战S脚本已启动")
             else:
                 self.release_msg("拦截战S脚本启动失败，请重试")  
             
 
         def end_battle_s():
-            """
-            if self.battle_s_process:
-                self.keyboard.press('c')
-                self.keyboard.release('c')
-            """
-            if self.battle_s_process and self.battle_s_process.poll() is None:
-                os.kill(self.battle_s_process.pid, signal.CTRL_BREAK_EVENT)
-            self.battle_s_process = None
+            if self.sim_process and self.sim_process.poll() is None:
+                os.kill(self.sim_process.pid, signal.CTRL_BREAK_EVENT)
+            self.sim_process = None
 
         btn1.clicked.connect(start_battle_s)
         btn2.clicked.connect(end_battle_s)
@@ -217,12 +207,28 @@ class Nikke_Toolkit(QWidget):
         self.regist(btn4)
 
         def start_aim():
-            self.keyboard.press('s')
-            self.keyboard.release('s')
+            
+            self.keyboard.press('o')
+            self.keyboard.release('o')
+            
+            """
+            try:
+                self.sim_process.communicate(input='start_aim'.encode(),timeout=1)
+            except:
+                pass
+            """
 
         def end_aim():
-            self.keyboard.press('e')
-            self.keyboard.release('e')
+            
+            self.keyboard.press('p')
+            self.keyboard.release('p')
+            
+            """
+            try:
+                self.sim_process.communicate(input='end_aim'.encode(),timeout=1)
+            except:
+                pass
+            """
 
         btn3.clicked.connect(start_aim)
         btn4.clicked.connect(end_aim)
@@ -236,11 +242,44 @@ class Nikke_Toolkit(QWidget):
         self.regist(defend)
 
 
+    def add_sim_room(self):
+        btn1 = QPushButton("开始模拟室",self)
+        btn1.move(50,200)
+        self.regist(btn1)
+
+        btn2 = QPushButton("结束模拟室",self)
+        btn2.move(200,200)
+        self.regist(btn2)    
+
+        def start_sim_room():
+            self.keyboard.press('[')
+            self.keyboard.release('[')
+            """
+            try:
+                self.sim_process.communicate(input='start_simroom\n'.encode(),timeout=1)
+            except:
+                pass
+            """
+
+        def end_sim_room():
+            self.keyboard.press(']')
+            self.keyboard.release(']')
+            """
+            try:
+                self.sim_process.communicate(input='end_simroom\n'.encode(),timeout=1)
+            except:
+                pass
+            """
+
+        btn1.clicked.connect(start_sim_room)
+        btn2.clicked.connect(end_sim_room)
+
 
     def initUI(self):
         self.add_active_window()
         self.add_screenshot()
         self.add_battle_S()
+        self.add_sim_room()
         
         self.show()
 
