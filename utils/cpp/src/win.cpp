@@ -23,7 +23,7 @@ BOOL CALLBACK enumWindowsProc(HWND hWnd, LPARAM lParam){
 
 HWND GetHWndByName(const char* windowName) {
 	std::vector<std::string> windowTitles;
-	EnumWindows(&enumWindowProc, reinterpret_cast<LPARAM>(&windowTitles));
+	EnumWindows(&enumWindowsProc, reinterpret_cast<LPARAM>(&windowTitles));
 
 	HWND hWnd = -1; 
 	for (auto windowTitle : windowTitles) {
